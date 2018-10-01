@@ -163,15 +163,9 @@ local function getdata(dataset_name, DMSO_mean, inputsize,
       return inputs, targets
     end
 
-    if opt.siamese then
-        print('How did this happen')
-        print(a+youpi)
-
-    else
-        function dataset:getBatch(batchsize)
-            return self:_getClassifBatch(batchsize, opt.num_classes)
-        end
-    end
+   function dataset:getBatch(batchsize)
+       return self:_getClassifBatch(batchsize, opt.num_classes)
+   end
 
    return dataset
 end

@@ -158,26 +158,8 @@ local function getdata(dataset_name, mean, inputsize, dataset_role, set_name)
         return result
     end
 
-    if opt.siamese then
-        if opt.target_supervision_level==0 then
-            print('This has not been done')
-            print(a+yu)
-        end
-        if opt.prioritization then
-            function dataset:getBatch(batchsize,timepoint)
-                if timepoint<10 then return general_data._getSiameseBatch(batchsize, self, opt) end
-                return general_data._getPrioritizedSiameseBatch(batchsize, self, opt)
-            end
-
-        else
-            function dataset:getBatch(batchsize)
-                return general_data._getSiameseBatch(batchsize, self, opt)
-            end
-        end
-    else
-        function dataset:getBatch(batchsize)
-            return self:_getClassifBatch(batchsize)
-        end
+    function dataset:getBatch(batchsize)
+        return self:_getClassifBatch(batchsize)
     end
    return dataset
 end
