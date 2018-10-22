@@ -62,7 +62,7 @@ You need Torch7, FiJi (if England dataset will be used) and Python2 or 3. Specif
 * Python: opencv
 
 ## Get the data and VGG-16 model, pre-process the data
-1. Download California and Texas from [here](). Let us call <cell_dir> where you unpacked it.
+1. Download California and Texas from [here](https://drive.google.com/file/d/1pdVC1bQN59uWrp2OgB9sKfFBuKW_UFwv/view?usp=sharing). Let us call <cell_dir> where you unpacked it.
 
 2. Prepare (creating folders, and dl VGG-16):
 ```
