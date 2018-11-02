@@ -32,7 +32,9 @@ local folder = path.join (rundir, 'office')
 
 opt.eta0 = tonumber(arg[1])
 opt.source = arg[2]
+if opt.source:lower()=='england' then opt.source="Caie" else opt.source = opt.source:lower()=='california' and 'UCSF' or 'UTSW' end
 opt.target = arg[3]
+if opt.target:lower()=='england' then opt.target="Caie" else opt.target = opt.target:lower()=='california' and 'UCSF' or 'UTSW' end
 
 opt.domain_adaptation = false
 opt.domainLambda = 0

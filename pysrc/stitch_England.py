@@ -1,24 +1,21 @@
-import getpass
-import os, cv2, pandas, shutil, math
+import os, cv2, pandas, shutil, math, pdb
 import scipy.ndimage as ndimage
 import numpy as np
 from optparse import OptionParser
 
-bgs_folder = 'bgs_images'
-redo = False
-output_image_name = 'Caie_plate_{plateID}_20x_t48_{well}_0000-{channel}.tif'
+from utils import bgs_folder, output_image_name, compute_stitching_macro, copy_stitching_macro
 
-compute_stitching_macro = '''run("Grid/Collection stitching", "type=[Grid: row-by-row] order=[Right & Down                ] grid_size_x=2 grid_size_y=2 tile_overlap=5 first_file_index_i=1 directory={outputdir} file_names=tile_{{ii}}.tif output_textfile_name=CorrectTileConfiguration.txt fusion_method=[Linear Blending] regression_threshold=0.30 max/avg_displacement_threshold=2.50 absolute_displacement_threshold=3.50 compute_overlap display_fusion computation_parameters=[Save computation time (but use more RAM)] image_output=[Write to disk] output_directory={outputdir}");'''
-copy_stitching_macro = '''run("Grid/Collection stitching", "type=[Positions from file] order=[Defined by TileConfiguration] directory={outputdir} layout_file=CorrectTileConfiguration.txt fusion_method=[Linear Blending] regression_threshold=0.30 max/avg_displacement_threshold=2.50 absolute_displacement_threshold=3.50 compute_overlap computation_parameters=[Save computation time (but use more RAM)] image_output=[Write to disk] output_directory={outputdir}");'''
+redo = False
 
 class CaieStitcher(object):
     def __init__(self, metadata_dir, intelligent_stitching=False):
         # i. read csv file which tells us all about the images
-        self.df = pandas.read_csv(
-                os.path.join(metadata_dir, 'Caie_info', 'BBBC021_v1_image.csv'))
+        self.df = pandas.read_csv(os.path.join(metadata_dir, 'Caie_info', 'BBBC021_v1_image.csv'))
 
-        self.df['Condition'] = [el.Plate + el.Well + el.Compound + str(el.Dose) + str(el.Replicate) for i, el in
-                                self.df.iterrows()]
+        #ii. Read csv which tells us about the images we will be using (phenoactive images)
+        final_df = pandas.read_csv(os.path.join(metadata_dir, 'Caie_info', 'Final_dataset_Caie.csv'))
+        self.final_df = pandas.DataFrame(final_df[final_df.DrugClass!='Inactive'])
+
         # For images with few cells, we cannot do the intelligent stitching because not able to paste images against eachother
         # using intensity correlations
         self.intelligent_stitching = intelligent_stitching
@@ -42,7 +39,7 @@ class CaieStitcher(object):
                 except:
                     pass
 
-    def stitch_condition(self, condition):
+    def stitch_condition(self, currPlate, currWell):
         '''
         # a. copy the images to the right folder
         # b. for each channel rename to tile_01--04.tif
@@ -53,9 +50,7 @@ class CaieStitcher(object):
         :param condition:
         :return:
         '''
-        currDf = self.df[self.df.Condition == condition]
-        currPlate = currDf.Plate.values[0]
-        currWell = currDf.Well.values[0]
+        currDf = self.df[(self.df.Well == currWell)&(self.df.Plate==currPlate)]
 
         self.folder = os.path.join(outputfolder, currPlate, bgs_folder, currWell)
         if not redo and len(list(filter(lambda x: 'Caie_plate' in x, os.listdir(self.folder)))) == 3:
@@ -168,7 +163,7 @@ class CaieStitcher(object):
         self._copy_images(images, plate)
         macro = copy_stitching_macro.format(outputdir=self.folder)
         f = open('macro.ijm', 'w')
-        f.write(macro);
+        f.write(macro)
         f.close()
         os.system('{} --headless -macro {} > out.txt'.format(fiji_location, os.path.join(os.getcwd(), 'macro.ijm')))
 
@@ -179,7 +174,7 @@ class CaieStitcher(object):
         self._copy_images(actin_images, plate)
         macro = compute_stitching_macro.format(outputdir=self.folder)
         f = open('macro.ijm', 'w')
-        f.write(macro);
+        f.write(macro)
         f.close()
         os.system('{} --headless -macro {} > out.txt'.format(fiji_location, os.path.join(os.getcwd(), 'macro.ijm')))
 
@@ -273,16 +268,63 @@ class CaieStitcher(object):
 
         return top, left, right, bottom
 
-    def __call__(self, data_folder):
-        df = self.df
-        # ii. Prepare output folders
-        self._prepare_folders(df, data_folder)
 
-        # iii. For each plate for each well,
-        conditions = df.Condition.unique()
-        np.random.shuffle(conditions)
-        for condition in conditions:
-            self.stitch_condition(condition)
+    def harmonize_pixel_crops(self, plateList):
+        for plate in plateList:
+            folder = os.path.join(outputfolder, plate, bgs_folder)
+            if not os.path.isdir(folder):
+                continue
+            wells = os.listdir(folder)
+
+            for well in wells:
+                images = list(
+                    filter(lambda x: x[-4:] == '.tif', os.listdir(os.path.join(outputfolder, plate, bgs_folder, well))))
+
+                if len(images) == 3:
+                    try:
+                        self._crop_refactor(folder, plate, well, images)
+                    except AttributeError as e:
+                        print ('ERRRRR (del)', plate, well, e)
+                        for el in os.listdir(os.path.join(folder, well)):
+                            os.remove(os.path.join(folder, well, el))
+
+    def _crop_refactor(self, folder, plate, well, images):
+
+        im_list = {}
+        for image in sorted(images):
+            im_list[image] = cv2.imread(os.path.join(folder, well, image), -1)
+        xs = np.array([el.shape[0] for el in im_list.values()])
+        ys = np.array([el.shape[1] for el in im_list.values()])
+
+        if np.any(xs < 950) or np.any(ys < 1200):
+            print('ATTENTION IMAGE ANORMALEMENT PETITE (del)', plate, well, xs, ys)
+            for el in os.listdir(os.path.join(folder, well)):
+                os.remove(os.path.join(folder, well, el))
+            return
+
+        x = np.min(xs)
+        y = np.min(ys)
+
+        diff_x = np.array([el - x for el in xs])
+        diff_y = np.array([el - y for el in ys])
+
+        if np.max(diff_x) > 20 or np.max(diff_y) > 20:
+            print('ATTENTION GROS DECALAGE (del)', plate, well, diff_x, diff_y)
+            for el in os.listdir(os.path.join(folder, well)):
+                os.remove(os.path.join(folder, well, el))
+            return
+
+        for image in images:
+            cv2.imwrite(os.path.join(folder, well, image), im_list[image][:x, :y])
+
+    def __call__(self, data_folder):
+        # i. Prepare output folders
+        self._prepare_folders(self.final_df, data_folder)
+
+        # ii. For each plate for each well,
+        for i,el in self.final_df.iterrows():
+#For test            if el.Plate=='Week10_40111':
+            self.stitch_condition(currPlate=el.Plate, currWell=el.Well)
 
 if __name__ == '__main__':
     code_folder = os.path.dirname(os.getcwd())
@@ -295,16 +337,22 @@ if __name__ == '__main__':
     fiji_location = options.fiji
 
     metadata_dir = os.path.join(code_folder, 'metadata')
-    inputfolder = data_folder
-    outputfolder = os.path.join(data_folder, 'Caie/StitchedCaie')
+    inputfolder = os.path.join(data_folder, 'RawCaie')
+    outputfolder = os.path.join(data_folder, 'StitchedCaie')
+
     if not os.path.isdir(outputfolder):
         os.mkdir(outputfolder)
-    #fiji_location = '/home/asebag/software/Installed/Fiji.app/ImageJ-linux64'
 
+    #Doing intellignt stitching - ie using FiJi
     preparer = CaieStitcher(metadata_dir, intelligent_stitching=True)
     preparer(outputfolder)
 
-    #FiJi fails at some images, so we're just going to put the images together for these...
+    #Not perfect so smt it screws up image sizes in the different channels
+    print('Now harmonizing the image sizes')
+    plateList = filter(lambda x: os.path.isdir(os.path.join(outputfolder, x)), os.listdir(outputfolder))
+    preparer.harmonize_pixel_crops(plateList)
+
+    #Now for the failed images, just putting them together
+    print('Now finishing stitching')
     preparer = CaieStitcher(metadata_dir, intelligent_stitching=False)
     preparer(outputfolder)
-
