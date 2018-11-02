@@ -72,19 +72,28 @@ $ python preparation_Texas_California.py --data_folder <cell_dir>
 
 3. If you just want Texas and California, you can stop here. If you also want England, follow me. We will download the dataset from the database where it is stored [Ljosa et al., 2012],
 then we will stitch the images together, and finally down-scale them to the same size and scale as the others.
-* Downloading the data:
 ```
 $ cd <code_folder>/pysrc
 $ python dl_England.py --data_folder <cell_dir>
 $ python stitch_England.py --data_folder <cell_dir> --fiji <location of your FiJi executable, eg link to ImageJ-linux64>
-$ python scale_England.py
+$ python scale_England.py  --data_folder <cell_dir>
 ```
 
-2. Prepare (creating folders, and dl VGG-16):
+## Launch a run
 ```
-$ cd <code_folder>/pysrc
-$ python preparation_Texas_California.py --data_folder <office_dir>
+$ cd <code_folder>/luasrc
+$ THC_CACHING_ALLOCATOR=0 th bio_script.lua eta0 source target lambda fold method zeta p
 ```
+where
+* eta0: learning rate
+* source: either California, Texas or England
+* target: either California, Texas or England
+* lambda: -1 for no DA, otherwise value for hyper-parameter lambda
+* fold: training fold (between 0 and 4)
+* fully_transductive: true or false, to use the same unlabeled images for train and prediction or different ones
+* method: DANN, MADA or MuLANN
+* zeta: value for hyper-parameter zeta
+* p: value for hyper-parameter p
 
 ### License
 Copyright 2018, University of California, San Francisco
