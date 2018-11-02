@@ -86,8 +86,8 @@ $ THC_CACHING_ALLOCATOR=0 th bio_script.lua eta0 source target lambda fold metho
 ```
 where
 * eta0: learning rate
-* source: either amazon, webcam or dslr
-* target: either amazon, webcam or dslr
+* source: either California, Texas or England
+* target: either California, Texas or England
 * lambda: -1 for no DA, otherwise value for hyper-parameter lambda
 * fold: training fold (between 0 and 4)
 * fully_transductive: true or false, to use the same unlabeled images for train and prediction or different ones
