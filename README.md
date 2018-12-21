@@ -1,7 +1,15 @@
 # MuLANN
-Code for MuLANN publication
+Code and data for _Multi-domain adversarial learning_ by Schoenauer-Sebag A., Heinrich L., Schoenauer M., Sebag M., Wu L. and Altschuler S., accepted at ICLR 2019. [Manuscript and reviews](https://openreview.net/forum?id=Sklv5iRqYX)
 
-# Office runs
+Multi-domain learning (MDL) aims at obtaining a model with minimal average risk across multiple domains. Our empirical motivation is automated microscopy data, where cultured cells are imaged after being exposed to known and unknown chemical perturbations, and each dataset displays significant experimental bias. This paper presents a multi-domain adversarial learning approach, MuLANN, to leverage multiple datasets with overlapping but distinct class sets, in a semi-supervised setting.
+Our contributions include: i) a bound on the average- and worst-domain risk in MDL, obtained using the H-divergence; ii) a new loss to accommodate semi-supervised multi-domain learning and domain adaptation; iii) the experimental validation of the approach, improving on the state-of-the-art on three standard image benchmarks, and a novel bioimage dataset, [Cell](https://drive.google.com/file/d/1pdVC1bQN59uWrp2OgB9sKfFBuKW_UFwv/view?usp=sharing).
+
+# Table of contents
+
+1. [Office runs](#office-runs)
+2. [Cell runs](#cell-dataset-and-runs)
+
+# Office runs 
 
 ## Dependencies
 You need Torch7 and Python2 or 3. Specific packages:
