@@ -21,7 +21,6 @@ require 'main'
 opt.dataset = 'BIO'
 data_level = require 'bio_data'
 opt.model = 'VGG'
-opt.train_setting = 0
 opt.target_unlabelled_presence = true
 opt.target_supervision_level = 50
 opt.difficulty_level = 'easy'
@@ -48,9 +47,25 @@ opt.fold = (arg[5] and tonumber(arg[5])) or 0
 opt.fully_transductive = (arg[6]=='true' and true) or false
 
 opt.domain_method = arg[7] and arg[7] or opt.domain_method
-opt.train_setting = opt.domain_method=='MuLANN' and 1 or opt.train_setting
-if opt.domain_method=='MuLANN' or opt.domain_method=='MADA' then
+if opt.domain_method=="MADA" then
     opt.lr_decay = true
+    opt.indiv_lr = true
+    opt.train_setting = 1
+elseif opt.domain_method=="DANN" then
+    if opt.source=='UCSF' then
+        opt.lr_decay = true
+        opt.indiv_lr = false
+        opt.train_setting = 0
+    else
+        opt.lr_decay = false
+        opt.indiv_lr = true
+        opt.train_setting = 1
+    end
+elseif opt.domain_method=="MuLANN" then
+    opt.train_setting = 0
+    opt.indiv_lr = false
+    opt.lr_decay = false
+    if opt.source=="UTSW" then opt.lr_decay = true end
 end
 
 if arg[8] and arg[8]~='nil' then
