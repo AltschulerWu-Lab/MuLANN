@@ -105,8 +105,12 @@ class SmallDomainDiscriminator(nn.Module):
 
 
 class SmallNet(nn.Module):
-    def __init__(self, nchanelsin, nclasses, domain_lambda, info_zeta):
+    def __init__(self, options):
         super().__init__()
+        nchanelsin = options.nchannelsin
+        nclasses = options.nclasses
+        domain_lambda = options.domain_lambda
+        info_zeta = options.info_zeta
 
         self.feature_extractor = SmallFeatureExtractor(nchannelsin=nchanelsin)
         self.label_predictor = SmallLabelPredictor(ndimsin=self.feature_extractor.ndimsout,

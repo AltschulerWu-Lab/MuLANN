@@ -1,10 +1,7 @@
 """
 Dataset setting and data loader for MNIST-M.
 
-Credit: @Corenel
-
-Modified from
-https://github.com/pytorch/vision/blob/master/torchvision/datasets/mnist.py
+Credit: @Corenel 2017, MIT License
 """
 
 from __future__ import print_function
@@ -18,10 +15,10 @@ import torch.utils.data as data
 from PIL import Image
 
 
-def get_mnistm(batch_size, train, num_workers):
+def get_mnistm(options, train):
     """Get MNIST_M datasets loader."""
     # image pre-processing
-    pre_process = transforms.Compose([transforms.Resize(32), # 32 is expected
+    pre_process = transforms.Compose([transforms.Resize(options.inputsize), # 32 is expected
                                       transforms.ToTensor(),
                                       transforms.Normalize(
                                           mean=(0.5, 0.5, 0.5),
@@ -29,17 +26,18 @@ def get_mnistm(batch_size, train, num_workers):
                                       )])
 
     # datasets and data loader
-    mnistm_dataset = MNISTM(root='./data', mnist_root='./data',
-                           train=train, download=train,
-                           transform=pre_process)
+    mnistm_dataset = MNISTM(root=options.data_folder,
+                            mnist_root=options.data_folder,
+                            train=train, download=train,
+                            transform=pre_process)
 
     mnistm_data_loader = torch.utils.data.DataLoader(
         dataset=mnistm_dataset,
-        batch_size=batch_size,
+        batch_size=options.batchsize,
         shuffle=train,
         # Drops last non-full mini-batch
         drop_last=True,
-        num_workers=num_workers)
+        num_workers=options.num_workers)
 
     return mnistm_data_loader
 

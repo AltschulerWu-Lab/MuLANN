@@ -38,14 +38,14 @@ class RevGrad(Function):
 
 
 class GradientReversalLayer(Module):
-    def __init__(self, lambda_=1, sign=-1, *args, **kwargs):
+    def __init__(self, lambda_=1, sign=-1):
         """
         A gradient reversal layer.
         This layer has no parameters, and simply reverses the gradient
         in the backward pass.
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.lambda_ = lambda_
         self.sign = sign
 
