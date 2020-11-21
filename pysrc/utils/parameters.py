@@ -2,6 +2,12 @@ from dataclasses import dataclass
 from typing import Any
 from pathlib import Path
 
+semi_sup_classes = {'digits':
+                    {True: {1, 3, 5, 7, 9},
+                     False: {2, 4, 6, 8, 10}
+                     }
+                    }
+
 
 # Here I define parameters by default
 @dataclass

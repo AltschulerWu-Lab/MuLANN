@@ -15,33 +15,6 @@ import torch.utils.data as data
 from PIL import Image
 
 
-def get_mnistm(options, train):
-    """Get MNIST_M datasets loader."""
-    # image pre-processing
-    pre_process = transforms.Compose([transforms.Resize(options.inputsize), # 32 is expected
-                                      transforms.ToTensor(),
-                                      transforms.Normalize(
-                                          mean=(0.5, 0.5, 0.5),
-                                          std=(0.5, 0.5, 0.5)
-                                      )])
-
-    # datasets and data loader
-    mnistm_dataset = MNISTM(root=options.data_folder,
-                            mnist_root=options.data_folder,
-                            train=train, download=train,
-                            transform=pre_process)
-
-    mnistm_data_loader = torch.utils.data.DataLoader(
-        dataset=mnistm_dataset,
-        batch_size=options.batchsize,
-        shuffle=train,
-        # Drops last non-full mini-batch
-        drop_last=True,
-        num_workers=options.num_workers)
-
-    return mnistm_data_loader
-
-
 class MNISTM(data.Dataset):
     """`MNIST-M Dataset."""
 

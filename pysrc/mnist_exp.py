@@ -9,7 +9,7 @@ sys.path.append("/home/lalil0u/workspace/MuLANN/")
 from pysrc.utils import parameters, utils, dataset
 from pysrc.train import train
 from pysrc.models.small import SmallNet
-from pysrc.data import mnist, mnistm
+from pysrc.data import loader_getter, mnistm
 
 # Default values correspond to MNIST exp
 options = parameters.Params()
@@ -26,27 +26,30 @@ def launch_train():
 
     # Get model, weights initialized already
     model = SmallNet(options)
-    pdb.set_trace()
     # Get data loaders
-    # MNIST is there in all cases
-    mnist_train = mnist.get_mnist(options, train=True)
-    mnist_eval = mnist.get_mnist(options, train=False)
-    dataset1 = dataset.TransferDataset(name='mnist',
-                                       train=mnist_train,
-                                       evalset=mnist_eval)
-
-    if options.target == 'mnistm' or options.source == 'mnistm':
-        mnistm_train = mnistm.get_mnistm(options, train=True)
-        mnistm_eval = mnistm.get_mnistm(options, train=False)
-        dataset2 = dataset.TransferDataset(name='mnistm',
-                                           train=mnistm_train,
-                                           evalset=mnistm_eval)
-    elif options.source != 'mnistm' and options.target != 'mnistm':
+    # MNIST
+    mnist_getter = loader_getter.GetLoader(options, 'mnist')
+    mnistm_getter = loader_getter.GetLoader(options, 'mnistm')
+    if options.source == 'mnist':
+        get_source = mnist_getter
+        get_target = mnistm_getter
+    elif options.source == 'mnistm':
+        get_source = mnist_getter
+        get_target = mnistm_getter
+    else:
         raise NotImplementedError
 
-    source = dataset1 if options.source == 'mnist' else dataset2
-    target = dataset2 if options.target == 'mnistm' else dataset1
+    source = dataset.TransferDataset(name='mnist',
+                                     sup_train=get_source.get_vanilla(train=True),
+                                     sup_evalset=get_source.get_vanilla(train=False))
 
+    target = dataset.TransferDataset(name='mnistm',
+                                     sup_train=get_target.get_semisup(train=True, labelled=True),
+                                     sup_evalset=get_target.get_semisup(train=False, labelled=True),
+                                     unsup_train=get_target.get_semisup(train=True, labelled=False),
+                                     unsup_evalset=get_target.get_semisup(train=False, labelled=False))
+
+    pdb.set_trace()
     # Train
     train(model, options, source, target, SummaryWriter())
 

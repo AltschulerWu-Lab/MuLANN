@@ -1,6 +1,6 @@
 from torch import nn, sigmoid_
 from torch.nn import functional as F
-from pysrc.utils.gradient_reversal import GradientReversalLayer
+from pysrc.utils.gradient_reversal import RevGrad
 
 
 class SmallFeatureExtractor(nn.Module):
@@ -76,14 +76,15 @@ class SmallDomainDiscriminator(nn.Module):
 
     def __init__(self, ndimsin, domain_lambda=None, info_zeta=None):
         super().__init__()
-
+    # TODO one could optimize more and plan already if lambda will be dynamic or set once and for all
         if domain_lambda:
-            self.gradient_trsform = GradientReversalLayer(lambda_=domain_lambda, sign=-1)
+            self.param = -domain_lambda
         elif info_zeta:
-            self.gradient_trsform = GradientReversalLayer(lambda_=info_zeta, sign=1)
+            self.param = info_zeta
         else:
             print('No gradient reversal nor information passing')
-            self.gradient_trsform = None
+            self.param = None
+
         self.fc1 = nn.Linear(ndimsin, self.dim)
         self.fc2 = nn.Linear(self.dim, 1)
 
@@ -95,9 +96,11 @@ class SmallDomainDiscriminator(nn.Module):
         nn.init.zeros_(layer.bias)
         nn.init.kaiming_normal_(layer.weight, mode='fan_in', nonlinearity='linear')
 
-    def forward(self, input_):
-        if self.gradient_trsform:
-            input_ = self.gradient_trsform(input_)
+    def forward(self, input_, param_value):
+        if param_value:
+            input_ = RevGrad.apply(input_, param_value)
+        elif self.param:
+            input_ = RevGrad.apply(input_, self.param)
         input_ = F.relu_(self.fc1(input_))
         input_ = sigmoid_(self.fc2(input_))
 
@@ -117,20 +120,43 @@ class SmallNet(nn.Module):
                                                    nclasses=nclasses)
         if domain_lambda:
             self.domain_discriminator = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
-                                                             domain_lambda=domain_lambda)
+                                                                 domain_lambda=domain_lambda)
+            if info_zeta:
+                self.info_predictor = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
+                                                               info_zeta=info_zeta)
+                self.forward = self.forward_domain_info
+            else:
+                self.forward = self.forward_domain
+                self.info_predictor = None
         else:
             self.domain_discriminator = None
+            self.forward = self.forward_vanilla
 
-        if info_zeta:
-            self.info_predictor = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
-                                                           info_zeta=info_zeta)
-        else:
-            self.info_predictor = None
-
-    def forward(self, input_):
+    def forward_domain(self, input_, skip_binaries, param_value=None):
         input_ = self.feature_extractor.forward(input_)
         class_predictions = self.label_predictor.forward(input_)
-        domain_predictions = self.domain_discriminator(input_) if self.domain_discriminator else None
-        info_predictions = self.info_predictor(input_) if self.info_predictor else None
+        if not skip_binaries:
+            # Vu qu'on est en semi-sup
+            domain_predictions = self.domain_discriminator(input_, param_value=param_value)
+        else:
+            domain_predictions = None
+
+        return class_predictions, domain_predictions, None
+
+    def forward_domain_info(self, input_, skip_binaries, param_value=None):
+        input_ = self.feature_extractor.forward(input_)
+        class_predictions = self.label_predictor.forward(input_)
+        if not skip_binaries:
+            # Vu qu'on est en semi-sup
+            domain_predictions = self.domain_discriminator(input_, param_value=param_value)
+            info_predictions = self.info_predictor(input_, param_value=param_value)
+        else:
+            domain_predictions, info_predictions = None, None
 
         return class_predictions, domain_predictions, info_predictions
+
+    def forward_vanilla(self, input_, skip_binaries, param_value=None):
+        input_ = self.feature_extractor.forward(input_)
+        class_predictions = self.label_predictor.forward(input_)
+
+        return class_predictions, None, None

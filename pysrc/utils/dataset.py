@@ -5,5 +5,7 @@ from typing import Any
 @dataclass
 class TransferDataset:
     name: str = ''
-    train: Any = None
-    evalset: Any = None
+    sup_train: Any = None
+    unsup_train: Any = None
+    sup_evalset: Any = None
+    unsup_evalset: Any = None
