@@ -31,7 +31,7 @@ class Params:
     seed: int = 42
     num_workers: int = 2
     testingBatch: int = 320
-    result_folder: Any = None
+    result_folder: Any = Path("/home/lalil0u/workspace/MuLANN/results")
     data_folder: Any = Path("/home/lalil0u/workspace/MuLANN/data")
 
     # OPTIM

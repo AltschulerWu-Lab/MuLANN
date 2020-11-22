@@ -5,7 +5,7 @@ from pathlib import Path
 from optparse import OptionParser
 from torch.utils.tensorboard import SummaryWriter
 
-sys.path.append("/home/lalil0u/workspace/MuLANN/")
+sys.path.append(str(Path.cwd()))
 from pysrc.utils import parameters, utils, dataset
 from pysrc.train import train
 from pysrc.models.small import SmallNet
@@ -13,7 +13,7 @@ from pysrc.data import loader_getter, mnistm
 
 # Default values correspond to MNIST exp
 options = parameters.Params()
-options.result_folder = Path("/home/lalil0u/workspace/MuLANN/results") / "digits"
+options.result_folder = options.result_folder / "digits"
 
 
 def launch_training():
@@ -32,6 +32,7 @@ def launch_training():
     # Get data loaders
     # MNIST
     mnist_getter = loader_getter.GetLoader(options, 'mnist')
+    # MNIST-M
     mnistm_getter = loader_getter.GetLoader(options, 'mnistm')
     if options.source == 'mnist':
         get_source = mnist_getter
@@ -42,11 +43,11 @@ def launch_training():
     else:
         raise NotImplementedError
 
-    source = dataset.TransferDataset(name='mnist',
+    source = dataset.TransferDataset(name=options.source,
                                      sup_train=get_source.get_vanilla(train=True),
                                      sup_evalset=get_source.get_vanilla(train=False))
 
-    target = dataset.TransferDataset(name='mnistm',
+    target = dataset.TransferDataset(name=options.target,
                                      sup_train=get_target.get_semisup(train=True, labelled=True),
                                      sup_evalset=get_target.get_semisup(train=False, labelled=True),
                                      unsup_train=get_target.get_semisup(train=True, labelled=False),
@@ -68,6 +69,7 @@ if __name__ == '__main__':
     parser.add_option('--unknown_perc', type=float, default=None)
     parser.add_option('--lrdecay', type=int, default=None)
     parser.add_option('--data_folder', type=str, default=None)
+    parser.add_option('--result_folder', type=str, default=None)
     parser.add_option('--domain_lambda', type=float, default=None)
     parser.add_option('--domain_method', type=str, default=None)
 

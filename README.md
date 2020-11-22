@@ -18,7 +18,9 @@ Feel free to open up an issue in the meanwhile, so that I can make it a priority
 ## Dependencies
 You need PyTorch and Python2 or 3. Specific packages:
 
-* Python: opencv
+* opencv
+* tensorboard
+* torchvision
 
 ## Get MNIST and MNIST-M
 Datasets will be downloaded by default, in the <data_dir> of your choice, when you launch training.
@@ -26,7 +28,7 @@ Datasets will be downloaded by default, in the <data_dir> of your choice, when y
 ## Launch a run
 ```
 $ cd <code_folder>
-$ python pysrc/mnist_exp.py --data_folder <data_dir>
+$ python pysrc/mnist_exp.py --data_folder <data_dir> --result_folder <result_dir>
 ```
 Other options:
 * gpu: number of desired GPU

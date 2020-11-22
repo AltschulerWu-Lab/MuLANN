@@ -145,7 +145,7 @@ def train(model, options, source, target, logger):
             logger.add_scalar('tgt_acc_domain', tgt_acc_domain, global_step)
 
     # save final model
-    utils.save_model(model, options.model_root, model_filename.format('final'))
+    utils.save_model(model, options.result_folder, model_filename.format('final'))
 
     return model
 
