@@ -160,3 +160,4 @@ class SmallNet(nn.Module):
         class_predictions = self.label_predictor.forward(input_)
 
         return class_predictions, None, None
+

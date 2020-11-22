@@ -16,7 +16,7 @@ options = parameters.Params()
 options.result_folder = Path("/home/lalil0u/workspace/MuLANN/results") / "digits"
 
 
-def launch_train():
+def launch_training():
     # Set random seed
     utils.init_random_seed(options.seed)
 
@@ -26,6 +26,9 @@ def launch_train():
 
     # Get model, weights initialized already
     model = SmallNet(options)
+    # Move model to device
+    model.to(options.device)
+
     # Get data loaders
     # MNIST
     mnist_getter = loader_getter.GetLoader(options, 'mnist')
@@ -49,8 +52,8 @@ def launch_train():
                                      unsup_train=get_target.get_semisup(train=True, labelled=False),
                                      unsup_evalset=get_target.get_semisup(train=False, labelled=False))
 
-    pdb.set_trace()
     # Train
+    print(model)
     train(model, options, source, target, SummaryWriter())
 
 
@@ -61,9 +64,11 @@ if __name__ == '__main__':
     parser.add_option('--num_workers', type=int, default=None)
     parser.add_option('--seed', type=int, default=None)
     parser.add_option('--eta0', type=int, default=None)
-    parser.add_option('--info_zeta', type=int, default=None)
+    parser.add_option('--info_zeta', type=float, default=None)
+    parser.add_option('--unknown_perc', type=float, default=None)
     parser.add_option('--lrdecay', type=int, default=None)
-    parser.add_option('--domain_lambda', type=int, default=None)
+    parser.add_option('--data_folder', type=str, default=None)
+    parser.add_option('--domain_lambda', type=float, default=None)
     parser.add_option('--domain_method', type=str, default=None)
 
     parser.add_option('--source', type=str, default="mnist")
@@ -73,4 +78,4 @@ if __name__ == '__main__':
     for k, v in parser.values.__dict__.items():
         if v:
             options.__setattr__(k, v)
-    launch_train()
+    launch_training()

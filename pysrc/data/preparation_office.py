@@ -24,11 +24,13 @@ This will perform the scaling of all images in office dataset to 256x256
 goal_size = 256.0
 num_channels = 3
 
-class OfficeScaler():
+
+class OfficeScaler(object):
     def __init__(self):
         pass
 
-    def _rescale(self, image_filename):
+    @staticmethod
+    def _rescale(image_filename):
         im = cv2.imread(image_filename)
 
         curr_size = im.shape[0]
@@ -38,8 +40,9 @@ class OfficeScaler():
         newImage = np.array(newImage, dtype='uint16')
         return newImage
 
-    def saveImage(self, im, dataset, class_, im_name):
-        cv2.imwrite(os.path.join(data_folder, 'scaled', dataset, class_, im_name),im)
+    @staticmethod
+    def save_image(im, dataset, class_, im_name):
+        cv2.imwrite(os.path.join(data_folder, 'scaled', dataset, class_, im_name), im)
 
     def rescale(self, dataset):
         classes = os.listdir(os.path.join(data_folder, 'raw', dataset, 'images'))
@@ -52,8 +55,8 @@ class OfficeScaler():
             images = os.listdir(os.path.join(data_folder, 'raw', dataset, 'images', class_))
 
             for im in images:
-                newImage = self._rescale(os.path.join(data_folder, 'raw', dataset, 'images',class_, im))
-                self.saveImage(newImage, dataset, class_, im)
+                newImage = self._rescale(os.path.join(data_folder, 'raw', dataset, 'images', class_, im))
+                self.save_image(newImage, dataset, class_, im)
 
         return
 
@@ -67,9 +70,10 @@ class OfficeScaler():
             print('Rescaling ', ds)
             self.rescale(ds)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     code_folder = os.path.dirname(os.getcwd())
-    #Working on Ubuntu 16.04, Python3.6.5
+    # Working on Ubuntu 16.04, Python3.6.5
     parser = OptionParser(usage="usage: %prog [options]")
     parser.add_option('--data_folder', type=str)
     (options, args) = parser.parse_args()
@@ -91,19 +95,19 @@ if __name__=='__main__':
     print('Launching image down-scaling')
     scaler()
 
-    #Now downloading VGG_16 if not already there
+    # Now downloading VGG_16 if not already there
     cmd = 'wget http://www.robots.ox.ac.uk/%7Evgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel'
     if not os.path.isfile(os.path.join(code_folder, 'metadata', 'vgg_16', 'VGG_ILSVRC_16_layers.caffemodel')):
         os.system(cmd)
         shutil.move('VGG_ILSVRC_16_layers.caffemodel', os.path.join(code_folder, 'metadata', 'vgg_16'))
 
-    #Creating a result folder
+    # Creating a result folder
     try:
         os.mkdir(os.path.join(code_folder, 'results'))
     except FileExistsError:
         pass
 
-    #Finally, adding the location data_folder to the lua settings_file
-    f=open(os.path.join(code_folder, 'luasrc', 'settings.lua'), 'a')
+    # Finally, adding the location data_folder to the lua settings_file
+    f = open(os.path.join(code_folder, 'luasrc', 'settings.lua'), 'a')
     f.write("\noffice_folder = '{}'\n".format(os.path.join(data_folder, 'scaled')))
     f.close()

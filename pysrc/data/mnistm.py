@@ -1,7 +1,7 @@
 """
 Dataset setting and data loader for MNIST-M.
 
-Credit: @Corenel 2017, MIT License
+Credit: mainly from @Corenel 2017, MIT License with modifications to fit global getter
 """
 
 from __future__ import print_function
@@ -31,7 +31,7 @@ class MNISTM(data.Dataset):
                  transform=None, target_transform=None,
                  download=False):
         """Init MNIST-M dataset."""
-        super(MNISTM, self).__init__()
+        super().__init__()
         self.root = os.path.expanduser(root)
         self.mnist_root = os.path.expanduser(mnist_root)
         self.transform = transform
@@ -46,12 +46,12 @@ class MNISTM(data.Dataset):
                                ' You can use download=True to download it')
 
         if self.train:
-            self.train_data, self.train_labels = \
+            self.data, self.targets = \
                 torch.load(os.path.join(self.root,
                                         self.processed_folder,
                                         self.training_file))
         else:
-            self.test_data, self.test_labels = \
+            self.data, self.targets = \
                 torch.load(os.path.join(self.root,
                                         self.processed_folder,
                                         self.test_file))
@@ -63,10 +63,7 @@ class MNISTM(data.Dataset):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        if self.train:
-            img, target = self.train_data[index], self.train_labels[index]
-        else:
-            img, target = self.test_data[index], self.test_labels[index]
+        img, target = self.data[index], self.targets[index]
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
@@ -82,10 +79,7 @@ class MNISTM(data.Dataset):
 
     def __len__(self):
         """Return size of dataset."""
-        if self.train:
-            return len(self.train_data)
-        else:
-            return len(self.test_data)
+        return len(self.data)
 
     def _check_exists(self):
         return os.path.exists(os.path.join(self.root,
@@ -96,7 +90,7 @@ class MNISTM(data.Dataset):
                                         self.test_file))
 
     def download(self):
-        """Download the MNIST data."""
+        """Download the MNIST-M dataset."""
         # import essential packages
         from six.moves import urllib
         import gzip

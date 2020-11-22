@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import torch
 from torchvision import datasets, transforms
 from pysrc.utils.parameters import semi_sup_classes
@@ -21,16 +23,31 @@ class GetLoader(object):
         dataset = self._get_dataset(train)
 
         labels = torch.tensor(dataset.targets)
-        label_idx = (labels in self.semi_sup_classes[labelled])
+        label_idx = [label.item() in self.semi_sup_classes[labelled] for label in labels]
 
         return self._get_dataloader(dataset=torch.utils.data.dataset.Subset(dataset,
-                                                                            np.where(label_idx == 1)[0]),
+                                                                            np.where(label_idx)[0]),
                                     train=train)
 
     def get_vanilla(self, train):
         dataset = self._get_dataset(train)
 
         return self._get_dataloader(dataset, train)
+
+    def _get_dataset_office(self, category):
+        """Get Office datasets loader."""
+        # image pre-processing
+        pre_process = transforms.Compose([transforms.Resize(227),
+                                          transforms.ToTensor(),
+                                          transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                                               std=(0.229, 0.224, 0.225))
+                                          ])
+
+        # datasets and data_loader
+        office_dataset = datasets.ImageFolder((Path(self.options.data_folder) / 'office' / category / 'images'),
+                                              transform=pre_process)
+
+        return office_dataset
 
     def _get_dataset_mnistm(self, train):
         """Get MNIST_M datasets loader."""

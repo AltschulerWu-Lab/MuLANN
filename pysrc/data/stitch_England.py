@@ -3,24 +3,26 @@ import scipy.ndimage as ndimage
 import numpy as np
 from optparse import OptionParser
 
-from utils import bgs_folder, output_image_name, compute_stitching_macro, copy_stitching_macro
+from pysrc.utils import bgs_folder, output_image_name, compute_stitching_macro, copy_stitching_macro
 
 redo = False
 
-class CaieStitcher(object):
-    def __init__(self, metadata_dir, intelligent_stitching=False):
-        # i. read csv file which tells us all about the images
-        self.df = pandas.read_csv(os.path.join(metadata_dir, 'Caie_info', 'BBBC021_v1_image.csv'))
 
-        #ii. Read csv which tells us about the images we will be using (phenoactive images)
-        final_df = pandas.read_csv(os.path.join(metadata_dir, 'Caie_info', 'Final_dataset_Caie.csv'))
+class CaieStitcher(object):
+    def __init__(self, metadata_dir_, intelligent_stitching=False):
+        # i. read csv file which tells us all about the images
+        self.df = pandas.read_csv(os.path.join(metadata_dir_, 'Caie_info', 'BBBC021_v1_image.csv'))
+
+        # ii. Read csv which tells us about the images we will be using (phenoactive images)
+        final_df = pandas.read_csv(os.path.join(metadata_dir_, 'Caie_info', 'Final_dataset_Caie.csv'))
         self.final_df = pandas.DataFrame(final_df[final_df.DrugClass!='Inactive'])
 
-        # For images with few cells, we cannot do the intelligent stitching because not able to paste images against eachother
-        # using intensity correlations
+        # For images with few cells, we cannot do the intelligent stitching because not able to paste images against
+        # eachother using intensity correlations
         self.intelligent_stitching = intelligent_stitching
 
-    def _prepare_folders(self, df, datafolder):
+    @staticmethod
+    def _prepare_folders(df, datafolder):
         plates = df.Plate.unique()
         for plate in plates:
             try:
@@ -39,20 +41,22 @@ class CaieStitcher(object):
                 except:
                     pass
 
-    def stitch_condition(self, currPlate, currWell):
-        '''
+    def stitch_condition(self, curr_plate, curr_well):
+        """
         # a. copy the images to the right folder
         # b. for each channel rename to tile_01--04.tif
         # c. apply the stitching
         # read the text file and crop the output image
         # save it using output_image_name
         # delete the intermediary results
+        :param curr_well:
+        :param curr_plate:
         :param condition:
         :return:
-        '''
-        currDf = self.df[(self.df.Well == currWell)&(self.df.Plate==currPlate)]
+        """
+        currDf = self.df[(self.df.Well == curr_well) & (self.df.Plate == curr_plate)]
 
-        self.folder = os.path.join(outputfolder, currPlate, bgs_folder, currWell)
+        self.folder = os.path.join(outputfolder, curr_plate, bgs_folder, curr_well)
         if not redo and len(list(filter(lambda x: 'Caie_plate' in x, os.listdir(self.folder)))) == 3:
             return
 
@@ -65,21 +69,21 @@ class CaieStitcher(object):
         if self.intelligent_stitching:
             # First of all, compute stitching on the Actin channel
             print('###########TAKING CARE OF CHANNEL 3')
-            self.stitch_actin(currPlate, currWell, images[3])
+            self.stitch_actin(curr_plate, curr_well, images[3])
             # Then use this stitching for the other two channels
             print('###########TAKING CARE OF CHANNEL 1')
-            self.transfer_actin_stitch(currPlate, currWell, channel=1, images=images[1])
+            self.transfer_actin_stitch(curr_plate, curr_well, channel=1, images=images[1])
             print('###########TAKING CARE OF CHANNEL 2')
-            self.transfer_actin_stitch(currPlate, currWell, channel=2, images=images[2])
+            self.transfer_actin_stitch(curr_plate, curr_well, channel=2, images=images[2])
             # Finally checking that nothing bad happened during stitching
             print('#######CHECKING GAPS')
-            self.check_channel_dimensions(images, currPlate, currWell)
+            self.check_channel_dimensions(images, curr_plate, curr_well)
 
         else:
             print('Going for unintelligent stitching')
             # Just putting the 4 images next to eachother and scaling down the size
             for channel, image_list in images.items():
-                self._unintelligent_stitching(image_list, currPlate, currWell, channel)
+                self._unintelligent_stitching(image_list, curr_plate, curr_well, channel)
 
     def _unintelligent_stitching(self, image_list, plate, well, channel):
         self._copy_images(image_list, plate)
@@ -236,7 +240,8 @@ class CaieStitcher(object):
         return math.ceil(x1), math.ceil(y1), math.ceil(x2), math.ceil(y2), math.ceil(x3), math.ceil(y3), math.ceil(
             x4), math.ceil(y4)
 
-    def __read_registration_file(self, lines):
+    @staticmethod
+    def __read_registration_file(lines):
         for line in lines:
             if 'tile' in line:
                 ll = line.split('(')[1].split(',')
@@ -268,7 +273,6 @@ class CaieStitcher(object):
 
         return top, left, right, bottom
 
-
     def harmonize_pixel_crops(self, plateList):
         for plate in plateList:
             folder = os.path.join(outputfolder, plate, bgs_folder)
@@ -288,7 +292,8 @@ class CaieStitcher(object):
                         for el in os.listdir(os.path.join(folder, well)):
                             os.remove(os.path.join(folder, well, el))
 
-    def _crop_refactor(self, folder, plate, well, images):
+    @staticmethod
+    def _crop_refactor(folder, plate, well, images):
 
         im_list = {}
         for image in sorted(images):
@@ -317,18 +322,18 @@ class CaieStitcher(object):
         for image in images:
             cv2.imwrite(os.path.join(folder, well, image), im_list[image][:x, :y])
 
-    def __call__(self, data_folder):
+    def __call__(self, data_folder_):
         # i. Prepare output folders
-        self._prepare_folders(self.final_df, data_folder)
+        self._prepare_folders(self.final_df, data_folder_)
 
         # ii. For each plate for each well,
-        for i,el in self.final_df.iterrows():
-#For test            if el.Plate=='Week10_40111':
-            self.stitch_condition(currPlate=el.Plate, currWell=el.Well)
+        for i, el in self.final_df.iterrows():
+            self.stitch_condition(curr_plate=el.Plate, curr_well=el.Well)
+
 
 if __name__ == '__main__':
     code_folder = os.path.dirname(os.getcwd())
-    #Working on Ubuntu 16.04, Python3.6.5
+    # Working on Ubuntu 16.04, Python3.6.5
     parser = OptionParser(usage="usage: %prog [options]")
     parser.add_option('--data_folder', type=str)
     parser.add_option('--fiji', type=str)
@@ -343,16 +348,16 @@ if __name__ == '__main__':
     if not os.path.isdir(outputfolder):
         os.mkdir(outputfolder)
 
-    #Doing intellignt stitching - ie using FiJi
+    # Doing intellignt stitching - ie using FiJi
     preparer = CaieStitcher(metadata_dir, intelligent_stitching=True)
     preparer(outputfolder)
 
-    #Not perfect so smt it screws up image sizes in the different channels
+    # Not perfect so smt it screws up image sizes in the different channels
     print('Now harmonizing the image sizes')
     plateList = filter(lambda x: os.path.isdir(os.path.join(outputfolder, x)), os.listdir(outputfolder))
     preparer.harmonize_pixel_crops(plateList)
 
-    #Now for the failed images, just putting them together
+    # Now for the failed images, just putting them together
     print('Now finishing stitching')
     preparer = CaieStitcher(metadata_dir, intelligent_stitching=False)
     preparer(outputfolder)
