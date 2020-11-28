@@ -19,8 +19,9 @@ if __name__ == '__main__':
 
     parser.add_option('--gpu', type=int, default=None)
     parser.add_option('--num_workers', type=int, default=None)
+    parser.add_option('--num_epochs', type=int, default=None)
     parser.add_option('--seed', type=int, default=None)
-    parser.add_option('--eta0', type=int, default=None)
+    parser.add_option('--eta0', type=float, default=None)
     parser.add_option('--info_zeta', type=float, default=None)
     parser.add_option('--unknown_perc', type=float, default=None)
     parser.add_option('--lrdecay', type=int, default=None)

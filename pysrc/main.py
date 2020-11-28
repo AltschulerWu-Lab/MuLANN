@@ -32,7 +32,7 @@ def launch_training(options, model_class, data_getter):
                                      sup_train=get_source.get_vanilla(train=True, shuffle=True),
                                      sup_test=get_source.get_vanilla(train=False, shuffle=False))
 
-    if source.dataset == 'digits':
+    if get_source.dataset == 'digits':
         # NB: In the paper, unlabelled data used during training
         # came from the test split (MNIST data, Office data)
         unsup_train = get_target.get_semisup(train=True, labelled=False, use='train')
@@ -46,7 +46,7 @@ def launch_training(options, model_class, data_getter):
                                          unsup_val=unsup_val,
                                          unsup_test=unsup_test)
 
-    elif source.dataset == 'office':
+    elif get_source.dataset == 'office':
         unsup_train, unsup_test = get_target.get_semisup(train=False, shuffle=True)
 
         target = dataset.TransferDataset(name=options.target,
@@ -57,4 +57,5 @@ def launch_training(options, model_class, data_getter):
 
     # Train
     print(model)
+    print(options)
     train(model, options, source, target, SummaryWriter())

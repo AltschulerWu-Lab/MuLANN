@@ -15,7 +15,7 @@ class DigitsGetLoader(GetLoader):
 
         super().__init__(options)
 
-    def _get_dataset_mnist(self, train):
+    def _get_dataset_mnist(self, train, **kwargs):
         # image pre-processing
         pre_process = transforms.Compose([transforms.Resize(self.options.inputsize), # 32 is expected
                                           transforms.Grayscale(3),
@@ -32,7 +32,7 @@ class DigitsGetLoader(GetLoader):
                                        transform=pre_process)
         return mnist_dataset
 
-    def _get_dataset_mnistm(self, train):
+    def _get_dataset_mnistm(self, train, **kwargs):
         """Get MNIST_M datasets loader."""
         # image pre-processing
         pre_process = transforms.Compose([transforms.Resize(self.options.inputsize),  # 32 is expected

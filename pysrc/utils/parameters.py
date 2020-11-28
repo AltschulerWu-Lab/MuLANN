@@ -38,9 +38,9 @@ class Params:
     # OPTIM
     # Batch size for a single domain, so total batch size is twice this
     batchsize: int = 64
-    num_epochs: int = 25001
-    plotinterval: int = 150
-    statinterval: int = 5000
+    num_epochs: int = 8
+    plotinterval: int = 1
+    statinterval: int = 1
     train_setting: int = 0 # TODO find the train_setting file corresponding to that train_setting number...
     indiv_lr: bool = False
     eta0: float = 0.001
