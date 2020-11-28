@@ -13,6 +13,12 @@
 #-- GNU General Public License for more details:
 #-- < http://www.gnu.org/licenses/ >.
 #------------------------------------------------------------------------
+"""
+Only necessary when running Torch models - PyTorch rescales images using the initial 'transform'
+when loading dataset.
+
+Warning: conflict between cv2 and Python > 3.5
+"""
 
 import cv2, os, shutil
 from scipy import ndimage

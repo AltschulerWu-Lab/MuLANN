@@ -18,7 +18,6 @@ Feel free to open up an issue in the meanwhile, so that I can make it a priority
 ## Dependencies
 You need PyTorch and Python2 or 3. Specific packages:
 
-* opencv
 * tensorboard
 * torchvision
 

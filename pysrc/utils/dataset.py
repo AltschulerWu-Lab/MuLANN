@@ -1,11 +1,13 @@
 from dataclasses import dataclass
-from typing import Any
+from torch.utils.data import DataLoader
 
 
 @dataclass
 class TransferDataset:
     name: str = ''
-    sup_train: Any = None
-    unsup_train: Any = None
-    sup_evalset: Any = None
-    unsup_evalset: Any = None
+    sup_train: DataLoader = None
+    unsup_train: DataLoader = None
+    sup_val: DataLoader = None
+    unsup_val: DataLoader = None
+    sup_test: DataLoader = None
+    unsup_test: DataLoader = None

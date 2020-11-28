@@ -29,6 +29,7 @@ class Params:
     gpu_id: int = 0
     device: Any = None
     seed: int = 42
+    fold: int = None
     num_workers: int = 2
     testingBatch: int = 320
     result_folder: Any = Path("/home/lalil0u/workspace/MuLANN/results")
