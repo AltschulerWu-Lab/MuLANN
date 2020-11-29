@@ -6,6 +6,7 @@ from pysrc.data.loader_getter import GetLoader
 
 class OfficeGetLoader(GetLoader):
     dataset = 'office'
+    num_classes = 31
 
     def __init__(self, options, dataset_name, role):
         if dataset_name in {'amazon', 'dslr', 'webcam'}:

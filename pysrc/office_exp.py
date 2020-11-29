@@ -7,7 +7,7 @@ sys.path.append(str(Path.cwd()))
 from pysrc.utils import parameters
 from pysrc.models.large import LargeNet
 from pysrc.main import launch_training
-from pysrc.data.office_loader import OfficeGetLoader
+from pysrc.data.usual.office_loader import OfficeGetLoader
 
 # Default values correspond to MNIST exp
 options = parameters.Params()

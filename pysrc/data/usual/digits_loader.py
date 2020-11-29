@@ -5,6 +5,7 @@ from pysrc.data.loader_getter import GetLoader
 
 class DigitsGetLoader(GetLoader):
     dataset = 'digits'
+    num_classes = 10
 
     def __init__(self, options, dataset_name, **kwargs):
         if dataset_name == 'mnist':

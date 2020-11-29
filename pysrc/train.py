@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-from random import randint
+
+from pysrc.transfer_options import vanilla_loss, dann_loss, mulann_loss
 from pysrc.utils import utils
 
 import torch.backends.cudnn as cudnn
@@ -15,38 +14,13 @@ def train(model, options, source, target, logger):
                                            source=options.source, target=options.target)
     ####################
     # Optimizer #
+    optimizer = utils.get_optimizer(options, model)
 
-    if 'office' not in options.source:
-        print("training non-office task")
-        # Setting function for lr evolution
-        # lr_func = utils.adjust_learning_rate
-        optimizer = optim.SGD(model.parameters(),
-                              lr=options.eta0,
-                              momentum=options.momentum,
-                              weight_decay=options.weight_decay)
-
-    else:
-        print("training office task")
-        parameter_list = [{
-            "params": model.features.parameters(),
-            "lr": 0.001
-        }, {
-            "params": model.fc.parameters(),
-            "lr": 0.001
-        }, {
-            "params": model.bottleneck.parameters()
-        }, {
-            "params": model.classifier.parameters()
-        }, {
-            "params": model.discriminator.parameters()
-        }]
-        optimizer = optim.SGD(parameter_list, lr=0.01, momentum=0.9)
-
-        # lr_func = utils.adjust_learning_rate_office
     ####################
     # Criteria #
-    criterion = nn.CrossEntropyLoss()
-    binary = nn.BCELoss()
+    class_criterion = nn.CrossEntropyLoss()
+    domain_criterion = nn.BCELoss()
+    info_criterion = domain_criterion
 
     ####################
     # Training #
@@ -54,19 +28,67 @@ def train(model, options, source, target, logger):
     device = options.device
     model.train()
 
-    if options.domain_method == 'None' or options.domain_method == 'DANN':
-        train_func = train_epoch
+    # Domain labels
+    source_dom_label = torch.zeros(options.batchsize, 1).to(device)  # source 0
+    target_dom_label = torch.ones(options.batchsize, 1).to(device)  # target 1
+
+    def train_epoch(data, curr_epoch, len_, total_step):
+
+        if options.domain_method == 'None':
+            propagate_func = vanilla_loss
+        elif options.domain_method == 'DANN':
+            propagate_func = dann_loss
+        elif options.domain_method == 'MuLANN':
+            propagate_func = mulann_loss
+        else:
+            raise ValueError('Not implemented')
+
+        for step, ((source_images, source_labels),
+                   (lab_target_images, target_labels),
+                   (unlab_target_images, _)) in enumerate(data):
+            # Lambda du papier DANN
+            # p = float(step + epoch * len_dataloader) / options.num_epochs / len_dataloader
+            #        alpha = 2. / (1. + np.exp(-10 * p)) - 1
+            alpha = options.domain_lambda
+
+            # Move data to the GPU
+            source_labels = source_labels.to(device)
+            source_images = source_images.to(device)
+            lab_target_images = lab_target_images.to(device)
+            target_labels = target_labels.to(device)
+
+            # Zero gradients
+            optimizer.zero_grad()
+
+            loss, src_class_loss, tgt_class_loss, src_dom_loss, tgt_dom_loss = propagate_func(
+                model=model, source_images=source_images, source_labels=source_labels,
+                source_dom_label=source_dom_label,
+                lab_target_images=lab_target_images, target_labels=target_labels, target_dom_label=target_dom_label,
+                unlab_target_images=unlab_target_images,
+                class_criterion=class_criterion, domain_criterion=domain_criterion, domain_lambda=alpha, device=device
+            )
+            # Backward pass
+            loss.backward()
+            optimizer.step()
+            # scheduler.step()
+            total_step += 1
+
+            # print step info
+            logger.add_scalar('source_class_loss', src_class_loss.item(), total_step)
+            logger.add_scalar('target_class_loss', tgt_class_loss.item(), total_step)
+            logger.add_scalar('source_dom_loss', src_dom_loss.item(), total_step)
+            logger.add_scalar('target_dom_loss', tgt_dom_loss.item(), total_step)
+            logger.add_scalar('loss', loss.item(), total_step)
+
+        return src_class_loss, tgt_class_loss, src_dom_loss, tgt_dom_loss, total_step
 
     for epoch in range(options.num_epochs):
         # zip source and target data pair
         len_dataloader = min(len(source.sup_train), len(target.sup_train), len(target.unsup_train))
         data_zip = zip(source.sup_train, target.sup_train, target.unsup_train)
 
-        source_class_loss, target_class_loss, source_dom_loss, target_dom_loss, global_step = train_func(
-            options=options, data_zip=data_zip, model=model, criterion=criterion, binary=binary,
-            optimizer=optimizer, epoch=epoch, len_dataloader=len_dataloader, global_step=global_step,
-            logger=logger
-        )
+        source_class_loss, target_class_loss, source_dom_loss, target_dom_loss, global_step = train_epoch(
+            data=data_zip, curr_epoch=epoch, len_=len_dataloader, total_step=global_step)
 
         if (epoch % options.plotinterval) == 0:
             info = (f"Epoch [{epoch + 1:4d}/{options.num_epochs}]: "
@@ -102,78 +124,6 @@ def train(model, options, source, target, logger):
     utils.save_model(model, options.result_folder, model_filename.format('final'))
 
     return model
-
-
-def train_epoch(options, data_zip, model, criterion, binary, optimizer,
-                epoch, len_dataloader, global_step, logger):
-    device = options.device
-    # Domain labels
-    source_dom_label = torch.zeros(options.batchsize, 1).to(device)  # source 0
-    target_dom_label = torch.ones(options.batchsize, 1).to(device)  # target 1
-    # Default loss values
-    source_dom_loss = torch.Tensor(1).fill_(-1)
-    target_dom_loss = torch.Tensor(1).fill_(-1)
-    target_class_loss = torch.Tensor(1).fill_(-1)
-
-    for step, ((source_images, source_labels),
-               (lab_target_images, target_labels),
-               (unlab_target_images, _)) in enumerate(data_zip):
-
-        p = float(step + epoch * len_dataloader) / options.num_epochs / len_dataloader
-        # Lambda du papier DANN
-        alpha = options.domain_lambda
-#        alpha = 2. / (1. + np.exp(-10 * p)) - 1
-
-        # Move data to the GPU
-        source_labels = source_labels.to(device)
-        source_images = source_images.to(device)
-        lab_target_images = lab_target_images.to(device)
-        target_labels = target_labels.to(device)
-
-        # Zero gradients
-        optimizer.zero_grad()
-
-        # Fwd source
-        src_class_output, src_domain_output, _ = model.forward(input_=source_images,
-                                                               param_value=alpha,
-                                                               skip_binaries=False)
-        # Losses
-        source_class_loss = criterion(src_class_output, source_labels)
-        loss = source_class_loss
-        if options.domain_method == 'DANN':
-            # Fwd target - semi-sup so only half classes are here.
-            # Other half is in the eval set
-            r = bool(randint(0, 1))
-            tgt_class_output, tgt_domain_output, _ = model.forward(input_=lab_target_images,
-                                                                   param_value=alpha,
-                                                                   skip_binaries=r)
-            # Every other time, I'm using the unlab images to train the domain disc
-            if r:
-                unlab_target_images = unlab_target_images.to(device)
-                _, tgt_domain_output, _ = model.forward(input_=unlab_target_images,
-                                                        param_value=alpha,
-                                                        skip_binaries=not r)
-
-            source_dom_loss = binary(src_domain_output, source_dom_label)
-            target_class_loss = criterion(tgt_class_output, target_labels)
-            target_dom_loss = binary(tgt_domain_output, target_dom_label)
-
-            # Not putting lambda here, it's taken care of in the middle
-            loss = source_class_loss + source_dom_loss + target_dom_loss + target_class_loss
-
-        # Backward pass
-        loss.backward()
-        optimizer.step()
-
-        global_step += 1
-
-        # print step info
-        logger.add_scalar('source_class_loss', source_class_loss.item(), global_step)
-        logger.add_scalar('source_dom_loss', source_dom_loss.item(), global_step)
-        logger.add_scalar('target_dom_loss', target_dom_loss.item(), global_step)
-        logger.add_scalar('loss', loss.item(), global_step)
-
-    return source_class_loss, target_class_loss, source_dom_loss, target_dom_loss, global_step
 
 
 def test(model, data_loader, device, options, flag):

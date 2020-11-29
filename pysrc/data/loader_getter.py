@@ -7,6 +7,7 @@ from abc import abstractmethod
 
 class GetLoader(object):
     dataset = ''
+    num_classes = 0
 
     def __init__(self, options):
         self.options = options
@@ -46,3 +47,11 @@ class GetLoader(object):
             # Drops last non-full mini-batch
             drop_last=True,
             num_workers=self.options.num_workers)
+
+    def get_classes(self, loader):
+        l = []
+        for _, labels in loader:
+            l.extend(labels)
+
+        counts = np.bincount(l, minlength=self.num_classes)
+        return counts > 0

@@ -86,6 +86,7 @@ class SmallDomainDiscriminator(nn.Module):
             self.param = None
 
         self.fc1 = nn.Linear(ndimsin, self.dim)
+        # TODO if more than 2 domains then output of size 3, and need for softmax below rather than sigmoid act
         self.fc2 = nn.Linear(self.dim, 1)
 
         self.initialize(self.fc1)
@@ -114,50 +115,36 @@ class SmallNet(nn.Module):
         nclasses = options.nclasses
         domain_lambda = options.domain_lambda
         info_zeta = options.info_zeta
+        self.knowledge_batch = int(options.unknown_perc * options.batchsize)
 
         self.feature_extractor = SmallFeatureExtractor(nchannelsin=nchanelsin)
         self.label_predictor = SmallLabelPredictor(ndimsin=self.feature_extractor.ndimsout,
                                                    nclasses=nclasses)
+        self.forward = self.forward_vanilla
+        self.domain_discriminator = None
+        self.info_predictor = None
         if domain_lambda:
             self.domain_discriminator = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
                                                                  domain_lambda=domain_lambda)
             if info_zeta:
                 self.info_predictor = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
                                                                info_zeta=info_zeta)
-                self.forward = self.forward_domain_info
-            else:
-                self.forward = self.forward_domain
-                self.info_predictor = None
-        else:
-            self.domain_discriminator = None
-            self.forward = self.forward_vanilla
 
-    def forward_domain(self, input_, skip_binaries, param_value=None):
-        input_ = self.feature_extractor.forward(input_)
-        class_predictions = self.label_predictor.forward(input_)
+            self.forward = self.forward_domain
+
+    def forward_domain(self, input_, skip_binaries, lambda_=None):
+        features = self.feature_extractor.forward(input_)
+        class_predictions = self.label_predictor.forward(features)
         if not skip_binaries:
             # Vu qu'on est en semi-sup
-            domain_predictions = self.domain_discriminator(input_, param_value=param_value)
+            domain_predictions = self.domain_discriminator(features, param_value=lambda_)
         else:
             domain_predictions = None
 
-        return class_predictions, domain_predictions, None
+        return class_predictions, domain_predictions, features
 
-    def forward_domain_info(self, input_, skip_binaries, param_value=None):
-        input_ = self.feature_extractor.forward(input_)
-        class_predictions = self.label_predictor.forward(input_)
-        if not skip_binaries:
-            # Vu qu'on est en semi-sup
-            domain_predictions = self.domain_discriminator(input_, param_value=param_value)
-            info_predictions = self.info_predictor(input_, param_value=param_value)
-        else:
-            domain_predictions, info_predictions = None, None
-
-        return class_predictions, domain_predictions, info_predictions
-
-    def forward_vanilla(self, input_, skip_binaries, param_value=None):
+    def forward_vanilla(self, input_, skip_binaries=None, lambda_=None):
         input_ = self.feature_extractor.forward(input_)
         class_predictions = self.label_predictor.forward(input_)
 
         return class_predictions, None, None
-

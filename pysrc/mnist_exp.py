@@ -7,7 +7,7 @@ sys.path.append(str(Path.cwd()))
 from pysrc.utils import parameters
 from pysrc.main import launch_training
 from pysrc.models.small import SmallNet
-from pysrc.data.digits_loader import DigitsGetLoader
+from pysrc.data.usual.digits_loader import DigitsGetLoader
 
 # Default values correspond to MNIST exp
 options = parameters.Params()

@@ -2,6 +2,42 @@ import random
 import numpy as np
 from pathlib import Path
 import torch
+import torch.optim as optim
+
+
+def get_optimizer(options, model):
+
+    if 'office' not in options.source:
+        print("training non-office task")
+        # Setting function for lr evolution
+        # scheduler = adjust_learning_rate
+        optimizer = optim.SGD(model.parameters(),
+                              lr=options.eta0,
+                              momentum=options.momentum,
+                              weight_decay=options.weight_decay)
+
+    else:
+        print("training office task")
+        parameter_list = [{
+            "params": model.features.parameters(),
+            "lr": 0.001
+        }, {
+            "params": model.fc.parameters(),
+            "lr": 0.001
+        }, {
+            "params": model.bottleneck.parameters()
+        }, {
+            "params": model.classifier.parameters()
+        }, {
+            "params": model.discriminator.parameters()
+        }]
+        optimizer = optim.SGD(parameter_list, lr=options.eta0,
+                              momentum=options.momentum,
+                              weight_decay=options.weight_decay)
+
+        # scheduler = adjust_learning_rate_office
+
+    return optimizer #, scheduler
 
 
 def init_random_seed(manual_seed=None):
