@@ -20,7 +20,7 @@ def train(model, options, source, target, logger):
     # Criteria #
     class_criterion = nn.CrossEntropyLoss()
     domain_criterion = nn.BCELoss()
-    info_criterion = domain_criterion
+    info_criterion = nn.BCELoss(reduction='none')
 
     ####################
     # Training #
@@ -31,6 +31,7 @@ def train(model, options, source, target, logger):
     # Domain labels
     source_dom_label = torch.zeros(options.batchsize, 1).to(device)  # source 0
     target_dom_label = torch.ones(options.batchsize, 1).to(device)  # target 1
+    knowledge_batch = None if options.domain_method != 'MuLANN' else int(options.unknown_perc * options.batchsize)
 
     def train_epoch(data, curr_epoch, len_, total_step):
 
@@ -64,8 +65,10 @@ def train(model, options, source, target, logger):
                 model=model, source_images=source_images, source_labels=source_labels,
                 source_dom_label=source_dom_label,
                 lab_target_images=lab_target_images, target_labels=target_labels, target_dom_label=target_dom_label,
-                unlab_target_images=unlab_target_images,
-                class_criterion=class_criterion, domain_criterion=domain_criterion, domain_lambda=alpha, device=device
+                unlab_target_images=unlab_target_images, target_classes=target.classes,
+                class_criterion=class_criterion, domain_criterion=domain_criterion, domain_lambda=alpha,
+                info_criterion=info_criterion, info_zeta=options.info_zeta, knowledge_batch=knowledge_batch,
+                device=device
             )
             # Backward pass
             loss.backward()

@@ -3,6 +3,24 @@ import numpy as np
 from pathlib import Path
 import torch
 import torch.optim as optim
+from torch.distributions import Categorical
+
+
+def get_entropy_mask(unlabtgt_class_output, target_classes, knowledge_batch):
+    """
+
+    :param knowledge_batch: int, size of mini-batch that will go through the KUD
+    :param unlabtgt_class_output: torch.Tensor[Float], shape (batchsize, num_classes)
+    :param target_classes: np.ndarray[bool], shape (num_classes, )
+    :return:
+    """
+    # i. compute entropy
+    entropy = Categorical(probs=unlabtgt_class_output[:, target_classes].exp()).entropy()
+
+    # ii. select top 'knowledge_batch' to pass through the KUD
+    mask = entropy.topk(knowledge_batch).indices
+
+    return mask
 
 
 def get_optimizer(options, model):

@@ -14,6 +14,9 @@ class DigitsGetLoader(GetLoader):
         elif dataset_name == 'mnistm':
             self._get_dataset = self._get_dataset_mnistm
 
+        else:
+            raise ValueError(f'{dataset_name} is not a DIGITS dataset.')
+
         super().__init__(options)
 
     def _get_dataset_mnist(self, train, **kwargs):

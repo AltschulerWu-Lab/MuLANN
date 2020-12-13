@@ -115,7 +115,6 @@ class SmallNet(nn.Module):
         nclasses = options.nclasses
         domain_lambda = options.domain_lambda
         info_zeta = options.info_zeta
-        self.knowledge_batch = int(options.unknown_perc * options.batchsize)
 
         self.feature_extractor = SmallFeatureExtractor(nchannelsin=nchanelsin)
         self.label_predictor = SmallLabelPredictor(ndimsin=self.feature_extractor.ndimsout,
@@ -126,13 +125,26 @@ class SmallNet(nn.Module):
         if domain_lambda:
             self.domain_discriminator = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
                                                                  domain_lambda=domain_lambda)
+            self.forward = self.forward_domain
             if info_zeta:
                 self.info_predictor = SmallDomainDiscriminator(ndimsin=self.feature_extractor.ndimsout,
                                                                info_zeta=info_zeta)
 
-            self.forward = self.forward_domain
+                self.forward = self.forward_domain_info
 
-    def forward_domain(self, input_, skip_binaries, lambda_=None):
+    def forward_domain_info(self, input_, skip_binaries, lambda_=None, zeta=None):
+        input_ = self.feature_extractor.forward(input_)
+        class_predictions = self.label_predictor.forward(input_)
+        if not skip_binaries:
+            # Vu qu'on est en semi-sup
+            domain_predictions = self.domain_discriminator(input_, param_value=lambda_)
+            info_predictions = self.info_predictor(input_, param_value=zeta)
+        else:
+            domain_predictions, info_predictions = None, None
+
+        return class_predictions, domain_predictions, info_predictions
+
+    def forward_domain(self, input_, skip_binaries, lambda_=None, **kwargs):
         features = self.feature_extractor.forward(input_)
         class_predictions = self.label_predictor.forward(features)
         if not skip_binaries:
@@ -141,9 +153,9 @@ class SmallNet(nn.Module):
         else:
             domain_predictions = None
 
-        return class_predictions, domain_predictions, features
+        return class_predictions, domain_predictions, None
 
-    def forward_vanilla(self, input_, skip_binaries=None, lambda_=None):
+    def forward_vanilla(self, input_, **kwargs):
         input_ = self.feature_extractor.forward(input_)
         class_predictions = self.label_predictor.forward(input_)
 

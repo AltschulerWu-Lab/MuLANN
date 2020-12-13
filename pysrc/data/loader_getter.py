@@ -49,6 +49,11 @@ class GetLoader(object):
             num_workers=self.options.num_workers)
 
     def get_classes(self, loader):
+        """
+
+        :param loader: DataLoader for which to indicate which classes are present
+        :return: np.ndarray[bool] of length self.num_classes
+        """
         l = []
         for _, labels in loader:
             l.extend(labels)

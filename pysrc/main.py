@@ -6,7 +6,6 @@ from torch.utils.tensorboard import SummaryWriter
 sys.path.append(str(Path.cwd()))
 from pysrc.utils import utils, dataset
 from pysrc.train import train
-from pysrc.data import loader_getter
 
 
 def launch_training(options, model_class, data_getter):
@@ -39,8 +38,11 @@ def launch_training(options, model_class, data_getter):
         # Fully transductive setting: predicting on the same images than training
         unsup_val, unsup_test = get_target.get_semisup(train=options.fully_transductive,
                                                        labelled=False, use='val_test')
+        # Labelled training set
+        sup_train = get_target.get_semisup(train=True, labelled=True)
         target = dataset.TransferDataset(name=options.target,
-                                         sup_train=get_target.get_semisup(train=True, labelled=True),
+                                         classes=get_target.get_classes(sup_train),
+                                         sup_train=sup_train,
                                          sup_test=get_target.get_semisup(train=False, labelled=True),
                                          unsup_train=unsup_train,
                                          unsup_val=unsup_val,
@@ -49,11 +51,16 @@ def launch_training(options, model_class, data_getter):
     elif get_source.dataset == 'office':
         unsup_train, unsup_test = get_target.get_semisup(train=False, shuffle=True)
 
+        # Labelled training set
+        sup_train = get_target.get_semisup(train=True, shuffle=True)
         target = dataset.TransferDataset(name=options.target,
-                                         sup_train=get_target.get_semisup(train=True, shuffle=True),
+                                         classes=get_target.get_classes(sup_train),
+                                         sup_train=sup_train,
                                       #   sup_test=get_target.get_semisup(train=False, labelled=True),
                                          unsup_train=unsup_train,
                                          unsup_test=unsup_test)
+    else:
+        raise NotImplementedError(f'Dataset {get_source.dataset} not yet implemented.')
 
     # Train
     print(model)
