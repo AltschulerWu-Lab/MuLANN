@@ -4,7 +4,7 @@ Code and data for _Multi-domain adversarial learning_ by Schoenauer-Sebag A., He
 Multi-domain learning (MDL) aims at obtaining a model with minimal average risk across multiple domains. Our empirical motivation is automated microscopy data, where cultured cells are imaged after being exposed to known and unknown chemical perturbations, and each dataset displays significant experimental bias. This paper presents a multi-domain adversarial learning approach, MuLANN, to leverage multiple datasets with overlapping but distinct class sets, in a semi-supervised setting.
 Our contributions include: i) a bound on the average- and worst-domain risk in MDL, obtained using the H-divergence; ii) a new loss to accommodate semi-supervised multi-domain learning and domain adaptation; iii) the experimental validation of the approach, improving on the state-of-the-art on three standard image benchmarks, and a novel bioimage dataset, [Cell](https://drive.google.com/file/d/1pdVC1bQN59uWrp2OgB9sKfFBuKW_UFwv/view?usp=sharing).
 # Note
-I'm currently translating this repo from Torch7 to PyTorch, so if your favorite run is not yet in PyTorch, it should be very soon. 
+I'm currently translating this repo from Torch7 to PyTorch. PyTorch code is currently available for the MNIST <> MNIST-M shift only. If your favorite run is not yet in PyTorch, it should be very soon. 
 Feel free to open up an issue in the meanwhile, so that I can make it a priority.
 
 # Table of contents
@@ -34,7 +34,7 @@ Other options:
 * num_workers: number of workers to compute mini-batches
 * seed: number for random seed
 * eta0: learning rate
-* domain_method: DANN, MADA or MuLANN (only DANN and no DA implemented in PyTorch currently)
+* domain_method: DANN, MADA or MuLANN (MADAM not yet implemented in PyTorch)
 * source: either mnist or mnistm
 * target: either mnist or mnistm
 * domain_lambda: no DA if no value is provided, otherwise value for hyper-parameter lambda
